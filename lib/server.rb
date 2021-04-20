@@ -1,7 +1,6 @@
 require 'socket'
 
 module Rakie
-  # Server doc
   class Server
     READ_SIZE = 1024 * 1024 * 2
     WRITE_SIZE = 1024 * 1024 * 2
