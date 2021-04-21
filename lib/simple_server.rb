@@ -80,7 +80,7 @@ module Rakie
       if data.length >= len + offset
         client[:request][:entity] = data[offset .. (offset + len - 1)]
         client[:parse_status] = PARSE_TYPE
-        client[:parse_length] = offset + len
+        client[:parse_offset] = offset + len
 
         puts("SimpleServer parse data entity ok")
         return PARSE_COMPLETE
