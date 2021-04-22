@@ -6,7 +6,15 @@ Gem::Specification.new do |s|
   s.date = %q{2021-03-29}
   s.description = %q{Rakie is lucky and lucky}
   s.email = %q{jakitliang@163.com}
-  s.files = ["Rakefile"]
+  s.files = [
+    "lib/rakie.rb",
+    "lib/rakie/channel.rb",
+    "lib/rakie/event.rb",
+    "lib/rakie/simple_server.rb",
+    "lib/rakie/tcp_channel.rb",
+    "lib/rakie/tcp_server_channel.rb",
+    "Rakefile"
+  ]
   s.test_files = ["test/test_rakie.rb"]
   s.homepage = %q{https://github.com/Jakitto/rakie}
   s.require_paths = ["lib"]

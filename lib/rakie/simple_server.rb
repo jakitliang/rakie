@@ -1,6 +1,3 @@
-require "tcp_server_channel"
-require "pp"
-
 module Rakie
   class SimpleServer
     PARSE_ERROR = -1
@@ -148,3 +145,5 @@ module Rakie
     end
   end
 end
+
+require "pp"

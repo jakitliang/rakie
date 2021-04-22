@@ -1,5 +1,3 @@
-require 'event'
-
 module Rakie
   class Channel
     attr_accessor :delegate

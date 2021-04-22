@@ -1,6 +1,3 @@
-require "socket"
-require "channel"
-
 module Rakie
   class TCPServerChannel < Channel
     def initialize(ip, port=nil, delegate=nil)
@@ -51,3 +48,5 @@ module Rakie
     end
   end
 end
+
+require "socket"
