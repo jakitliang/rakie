@@ -151,7 +151,7 @@ module Rakie
       data = ""
 
       response[:headers]["content-length"] = response[:content].length
-      response[:headers]["server"] = "Rakie 0.0.2"
+      response[:headers]["server"] = "Rakie v0.0.3"
 
       data += response[:head].values.join(' ')
       data += "\r\n"
