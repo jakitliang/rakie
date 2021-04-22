@@ -9,6 +9,10 @@ module Rakie
     HANDLE_CONTINUED = 0
     HANDLE_FINISHED = 1
 
+    OPERATION_ADD = 0
+    OPERATION_MODIFY = 1
+    OPERATION_DELETE = 2
+
     def initialize
       @wait_ios = []
       @lock = Mutex.new
@@ -24,36 +28,39 @@ module Rakie
     
     def process_signal(io)
       signal = io.read(1)
-      puts("Event handling #{signal}")
 
-      if signal == 'a'
-        new_io, new_handler, new_event = @wait_ios.shift
+      if signal == 'q'
+        return 1
+      end
+
+      operation, new_io, new_handler, new_event = @wait_ios.shift
+      if new_io.closed?
+        return 0
+      end
+
+      Log.debug("Event handling #{signal} with #{new_io.fileno} to #{new_event}")
+
+      if operation == OPERATION_ADD
         @ios[new_io] = new_event
         @handlers[new_io] = new_handler
-        puts("Event add all #{new_io} to #{new_event}")
+        Log.debug("Event add all #{new_io.fileno} to #{new_event}")
 
-      elsif signal == 'd'
-        new_io, = @wait_ios.shift
+      elsif operation == OPERATION_DELETE
         handler = @handlers[new_io]
 
         if handler != nil
+          Log.debug("Event close #{new_io}")
           handler.on_close(new_io)
-          puts("Event close #{new_io}")
         end
 
         @ios.delete(new_io)
         @handlers.delete(new_io)
+        Log.debug("Event remove all #{new_io}")
 
-        puts("Event remove all #{new_io}")
-
-      elsif signal == 'm'
-        new_io, new_handler, new_event = @wait_ios.shift
+      elsif operation == OPERATION_MODIFY
         @ios[new_io] = new_event
         @handlers[new_io] = new_handler
-        puts("Event modify all #{new_io} to #{new_event}")
-
-      elsif signal == 'q'
-        return 1
+        Log.debug("Event modify all #{new_io.fileno} to #{new_event}")
       end
 
       return 0
@@ -61,9 +68,18 @@ module Rakie
 
     def run_loop
       loop do
+        # p @ios
+        # begin
+        #   read_ios = @ios.select {|k, v| v & READ_EVENT > 0}
+        #   write_ios = @ios.select {|k, v| v & WRITE_EVENT > 0}
+        # rescue Exception => e
+        #   p @ios
+        # end
+
         read_ios = @ios.select {|k, v| v & READ_EVENT > 0}
         write_ios = @ios.select {|k, v| v & WRITE_EVENT > 0}
 
+        # Log.debug("Event selecting ...")
         read_ready, write_ready = IO.select(read_ios.keys, write_ios.keys, [], 5)
 
         if read_ready != nil
@@ -90,15 +106,15 @@ module Rakie
 
             if result == HANDLE_FINISHED
               @ios[io] = @ios[io] & ~READ_EVENT
-              puts("Event remove read #{io}")
+              Log.debug("Event remove read #{io}")
 
             elsif result == HANDLE_FAILED
               handler.on_close(io)
-              puts("Event close #{io}")
+              Log.debug("Event close #{io}")
 
               @ios.delete(io)
               @handlers.delete(io)
-              puts("Event remove all #{io}")
+              Log.debug("Event remove all #{io}")
             end
           end
         end
@@ -115,15 +131,15 @@ module Rakie
 
             if result == HANDLE_FINISHED
               @ios[io] = @ios[io] & ~WRITE_EVENT
-              puts("Event remove write #{io}")
+              Log.debug("Event remove write #{io}")
 
             elsif result == HANDLE_FAILED
               handler.on_close(io)
-              puts("Event close #{io}")
+              Log.debug("Event close #{io}")
 
               @ios.delete(io)
               @handlers.delete(io)
-              puts("Event remove all #{io}")
+              Log.debug("Event remove all #{io}")
             end
           end
         end
@@ -132,22 +148,22 @@ module Rakie
 
     def push(io, handler, event)
       @lock.lock
-      @wait_ios.push([io, handler, event])
+      @wait_ios.push([OPERATION_ADD, io, handler, event])
       @signal_out.write('a')
       @lock.unlock
     end
 
     def delete(io)
       @lock.lock
-      @wait_ios.push([io, nil, nil])
-      @signal_out.write('d')
+      @wait_ios.push([OPERATION_DELETE, io, nil, nil])
+      @signal_out.write('a')
       @lock.unlock
     end
 
     def modify(io, handler, event)
       @lock.lock
-      @wait_ios.push([io, handler, event])
-      @signal_out.write('m')
+      @wait_ios.push([OPERATION_MODIFY, io, handler, event])
+      @signal_out.write('a')
       @lock.unlock
     end
 

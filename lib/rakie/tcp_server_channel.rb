@@ -22,21 +22,21 @@ module Rakie
         channel = Channel.new(client_io)
 
         if @delegate != nil
-          puts("TCPServerChannel has delegate")
+          Log.debug("TCPServerChannel has delegate")
           @delegate.on_accept(channel)
 
         else
-          puts("TCPServerChannel no delegate")
+          Log.debug("TCPServerChannel no delegate")
           @clients << channel
         end
 
-        puts("TCPServerChannel accept #{channel}")
+        Log.debug("TCPServerChannel accept #{channel}")
 
       rescue IO::EAGAINWaitReadable
-        puts("TCPServerChannel accept wait")
+        Log.debug("TCPServerChannel accept wait")
 
       rescue
-        puts("TCPServerChannel Accept failed #{io}")
+        Log.debug("TCPServerChannel Accept failed #{io}")
         return Event::HANDLE_FAILED
       end
 

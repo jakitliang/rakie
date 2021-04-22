@@ -31,7 +31,7 @@ module Rakie
           :entity => ""
         }
       }
-      puts("SimpleServer accept client: #{channel}")
+      Log.debug("SimpleServer accept client: #{channel}")
     end
 
     def parse_data_type(client, data)
@@ -41,7 +41,7 @@ module Rakie
         client[:parse_status] = PARSE_LEN
         client[:parse_offset] += 1
 
-        puts("SimpleServer parse data type ok")
+        Log.debug("SimpleServer parse data type ok")
         return PARSE_OK
       end
 
@@ -63,7 +63,7 @@ module Rakie
         client[:parse_status] = PARSE_ENTITY
         client[:parse_offset] = offset + 4
 
-        puts("SimpleServer parse data len ok")
+        Log.debug("SimpleServer parse data len ok")
         return PARSE_OK
       end
 
@@ -79,7 +79,7 @@ module Rakie
         client[:parse_status] = PARSE_TYPE
         client[:parse_offset] = offset + len
 
-        puts("SimpleServer parse data entity ok")
+        Log.debug("SimpleServer parse data entity ok")
         return PARSE_COMPLETE
       end
 
@@ -104,7 +104,7 @@ module Rakie
         end
       end
 
-      puts("SimpleServer parse data result #{result}")
+      Log.debug("SimpleServer parse data result #{result}")
 
       return result
     end
@@ -117,12 +117,10 @@ module Rakie
     end
 
     def on_recv(channel, data)
-      puts("SimpleServer recv: #{data}")
+      Log.debug("SimpleServer recv: #{data}")
       client = @clients[channel]
       client[:parse_offset] = 0
       result = self.parse_data(client, data)
-
-      pp client
 
       if result == PARSE_COMPLETE
         if @delegate != nil
@@ -137,7 +135,7 @@ module Rakie
       elsif result == PARSE_ERROR
         channel.close
         @clients.delete(channel)
-        puts("SimpleServer: Illegal request")
+        Log.debug("SimpleServer: Illegal request")
         return client[:parse_offset]
       end
 
@@ -145,5 +143,3 @@ module Rakie
     end
   end
 end
-
-require "pp"

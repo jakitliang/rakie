@@ -6,6 +6,7 @@ module Rakie
       @io = io
       @read_buffer = String.new
       @write_buffer = String.new
+      @write_task = []
       @delegate = delegate
       Event.push(io, self, Event::READ_EVENT)
     end
@@ -17,20 +18,19 @@ module Rakie
         end
 
       rescue IO::EAGAINWaitReadable
-        puts("Channel read finished")
+        Log.debug("Channel read finished")
 
-      rescue
+      rescue Exception => e
         # Process the last message on exception
         if @delegate != nil
           @delegate.on_recv(self, @read_buffer)
           @read_buffer = String.new # Reset buffer
         end
 
-        puts("Channel error #{io}")
+        Log.debug("Channel error #{io}: #{e}")
         return Event::HANDLE_FAILED
       end
 
-      puts("Channel has delegate?: #{@delegate}")
       if @delegate != nil
         len = @delegate.on_recv(self, @read_buffer)
 
@@ -39,29 +39,53 @@ module Rakie
         end
 
         @read_buffer = @read_buffer[len .. -1]
-        puts("Channel handle on_recv")
+        Log.debug("Channel handle on_recv")
       end
 
       return Event::HANDLE_CONTINUED
     end
 
+    def handle_write(len)
+      task = @write_task[0]
+
+      while len > 0
+        if len < task
+          @write_task[0] = task - len
+        end
+
+        len -= task
+        @write_task.shift
+
+        if @delegate != nil
+          @delegate.on_send(self)
+           Log.debug("Channel handle on_send")
+        end
+      end
+    end
+
     def on_write(io)
+      len = 0
+
       begin
         while @write_buffer.length > 0
           len = io.write_nonblock(@write_buffer)
           @write_buffer = @write_buffer[len .. -1]
         end
 
-        puts("Channel write finished")
+        Log.debug("Channel write finished")
 
       rescue IO::EAGAINWaitWritable
-        puts("Channel write continue")
+        self.handle_write(len)
+
+        Log.debug("Channel write continue")
         return Event::HANDLE_CONTINUED
 
       rescue
-        puts("Channel close #{io}")
+        Log.debug("Channel close #{io}")
         return Event::HANDLE_FAILED
       end
+
+      self.handle_write(len)
 
       return Event::HANDLE_FINISHED
     end
@@ -71,8 +95,10 @@ module Rakie
         io.close
 
       rescue
-        puts("Channel is already closed")
+        Log.debug("Channel is already closed")
       end
+
+      Log.debug("Channel close ok")
     end
 
     def read(size)
@@ -96,7 +122,9 @@ module Rakie
       end
 
       @write_buffer << data
-      Event.modify(@io, self, Event::READ_EVENT | Event::WRITE_EVENT)
+      @write_task << data.length
+
+      Event.modify(@io, self, (Event::READ_EVENT | Event::WRITE_EVENT))
 
       return 0
     end
