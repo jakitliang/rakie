@@ -9,7 +9,7 @@ module Rakie
     LEVEL_DEBUG = 2
 
     def initialize
-      @level = LEVEL_ERROR
+      @level = LEVEL_DEBUG
       @out = STDOUT
     end
 

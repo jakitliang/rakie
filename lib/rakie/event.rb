@@ -105,7 +105,7 @@ module Rakie
             result = handler.on_read(io)
 
             if result == HANDLE_FINISHED
-              @ios[io] = @ios[io] & ~READ_EVENT
+              @ios[io] &= ~READ_EVENT
               Log.debug("Event remove read #{io}")
 
             elsif result == HANDLE_FAILED
@@ -130,7 +130,7 @@ module Rakie
             result = handler.on_write(io)
 
             if result == HANDLE_FINISHED
-              @ios[io] = @ios[io] & ~WRITE_EVENT
+              @ios[io] &= ~WRITE_EVENT
               Log.debug("Event remove write #{io}")
 
             elsif result == HANDLE_FAILED
@@ -168,19 +168,38 @@ module Rakie
     end
 
     def self.instance
-      @instance ||= Event.new
+      @instance ||= Array.new(self.concurrent) { |i| Event.new }
     end
 
     def self.push(io, listener, type)
-      self.instance.push(io, listener, type)
+      i = io.fileno % self.concurrent
+      inst = self.instance[i]
+      inst.push(io, listener, type)
+      # instance.push(io, listener, type)
     end
 
     def self.delete(io)
-      self.instance.delete(io)
+      i = io.fileno % self.concurrent
+      inst = self.instance[i]
+      inst.delete(io)
+      # self.instance.delete(io)
     end
 
     def self.modify(io, listener, type)
-      self.instance.modify(io, listener, type)
+      i = io.fileno % self.concurrent
+      inst = self.instance[i]
+      inst.modify(io, listener, type)
+      # self.instance.modify(io, listener, type)
+    end
+
+    # @return [Integer]
+    def self.concurrent
+      @concurrent ||= 2
+    end
+
+    # @param [Integer] count
+    def self.concurrent=(count)
+      @concurrent = count
     end
   end
 end

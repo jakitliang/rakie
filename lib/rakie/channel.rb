@@ -2,6 +2,8 @@ module Rakie
   class Channel
     attr_accessor :delegate
 
+    DEFAULT_BUFFER_SIZE = 512 * 1024
+
     def initialize(io, delegate=nil)
       @io = io
       @read_buffer = String.new
@@ -14,7 +16,7 @@ module Rakie
     def on_read(io)
       begin
         loop do
-          @read_buffer << io.read_nonblock(4096)
+          @read_buffer << io.read_nonblock(DEFAULT_BUFFER_SIZE)
         end
 
       rescue IO::EAGAINWaitReadable
@@ -32,6 +34,7 @@ module Rakie
       end
 
       if @delegate != nil
+        Log.debug("Channel handle on_recv")
         len = @delegate.on_recv(self, @read_buffer)
 
         if len > @read_buffer.length
@@ -39,7 +42,6 @@ module Rakie
         end
 
         @read_buffer = @read_buffer[len .. -1]
-        Log.debug("Channel handle on_recv")
       end
 
       return Event::HANDLE_CONTINUED
