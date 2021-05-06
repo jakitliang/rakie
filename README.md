@@ -17,6 +17,7 @@ It works at any platform and simple delpoyment.
 
 * System: `macOS 11.2.3`
 * Protocol: `HTTP`
+* Ruby version: `2.5.8`
 * Testing tool: `siege`
 * Command: `siege -r 1000 -c 200 -q -b [url]`
 
