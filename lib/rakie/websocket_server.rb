@@ -13,8 +13,12 @@ module Rakie
       end
     end
 
-    def initialize(delegate=nil)
-      @channel = TCPServerChannel.new('127.0.0.1', 10086, self)
+    def initialize(delegate=nil, channel=nil)
+      @channel = channel
+
+      if channel == nil
+        @channel = TCPServerChannel.new('127.0.0.1', 10086, self)
+      end
 
       # @type [Hash{Channel=>Session}]
       @sessions = {}
@@ -50,7 +54,17 @@ module Rakie
       if request.parse_status == ParseStatus::COMPLETE
         response = WebsocketMessage.new
 
-        if @delegate != nil
+        if request.op_code == WebsocketMessage::OP_PING
+          response.fin = true
+          response.op_code = WebsocketMessage::OP_PONG
+          response.payload = "pong"
+
+        elsif request.op_code == WebsocketMessage::OP_PONG
+          response.fin = true
+          response.op_code = WebsocketMessage::OP_PING
+          response.payload = "ping"
+
+        elsif @delegate != nil
           response.payload = @delegate.handle(request.payload)
 
         else

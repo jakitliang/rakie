@@ -20,6 +20,7 @@ module Rakie
     PARSE_PAYLOAD = 4
 
     attr_accessor :op_code, :mask, :length, :payload
+    attr_writer :fin
 
     def initialize
       @fin = false
@@ -29,6 +30,10 @@ module Rakie
       @length = 0
       @long_ext = false
       @payload = ''
+    end
+
+    def fin?
+      @fin
     end
 
     # @param [String] source

@@ -19,12 +19,28 @@ module Rakie
       # @type [Hash{Channel=>Session}]
       @sessions = {}
       @delegate = delegate
+      @websocket_server = WebsocketServer.new(delegate, @channel)
     end
 
     def on_accept(channel)
       channel.delegate = self
       @sessions[channel] = Session.new
       Log.debug("Rakie::HTTPServer accept client: #{channel}")
+    end
+
+    # @param [HttpRequest] request
+    # @param [HttpResponse] response
+    # @return bool
+    def detect_upgrade(request, response)
+      if request.headers["connection"] == "upgrade"
+        if websocket_key = request.headers["sec-websocket-key"]
+          digest_key = Digest::SHA1.base64digest(websocket_key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')
+
+          response.headers["connection"] = "upgrade"
+          response.headers["upgrade"] = "websocket"
+          response.headers["sec-websocket-accept"] = digest_key
+        end
+      end
     end
 
     def on_recv(channel, data)
@@ -50,7 +66,10 @@ module Rakie
       if request.parse_status == ParseStatus::COMPLETE
         response = HttpResponse.new
 
-        if @delegate != nil
+        if detect_upgrade(request, response)
+          Log.debug("Rakie::WebServer upgrade protocol")
+
+        elsif @delegate != nil
           @delegate.handle(request, response)
 
         else
@@ -87,6 +106,11 @@ module Rakie
         if last_request.headers["connection"] == "close"
           Log.debug("Rakie::WebServer: send finish and close channel")
           channel.close
+          @sessions.delete(channel)
+
+        elsif last_request.headers["connection"] == "upgrade"
+          @websocket_server.on_accept(channel)
+          @sessions.delete(channel)
         end
       end
     end
@@ -94,3 +118,5 @@ module Rakie
 end
 
 require "pp"
+require "digest"
+require "base64"
