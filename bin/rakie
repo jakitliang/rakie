@@ -1,0 +1,14 @@
+#!/usr/bin/env ruby
+
+require "rakie"
+require "optparse"
+
+options = {}
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: rakie [options]"
+
+  opts.on("-v", "--version", "Show version") do |v|
+    puts(Rakie.full_version_s)
+  end
+end.parse!
