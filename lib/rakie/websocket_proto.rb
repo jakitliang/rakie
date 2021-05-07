@@ -76,7 +76,7 @@ module Rakie
       return data
     end
   end
-
+  
   class WebsocketMessage < WebsocketBasicMessage
     # @param [String] source
     def parse_source_operation(source)
@@ -261,19 +261,26 @@ module Rakie
     end
 
     def pack_source_masking
-      masking = []
-      4.times { masking << rand(1 .. 255) }
-      @masking = masking
-
-      return masking.pack('C*')
+      return @masking.pack('C*')
     end
 
     def pack_source_masked_payload
-      bytes_list = @payload.unpack('C*')
       masking = @masking
-      bytes_list_masked = bytes_list.map.with_index { |b, i| b ^ masking[i % 4] }
 
+      if masking.empty?
+        return ''
+      end
+
+      bytes_list = @payload.unpack('C*')
+      bytes_list_masked = bytes_list.map.with_index { |b, i| b ^ masking[i % 4] }
+      
       return bytes_list_masked.pack('C*')
+    end
+
+    def refresh_masking
+      masking = []
+      4.times { masking << rand(1 .. 255) }
+      @masking = masking
     end
   end
 end

@@ -56,7 +56,7 @@ module Rakie
       if semi_offset = header.index(':')
         return [
           header[0 .. (semi_offset - 1)].downcase,
-          header[(semi_offset + 1) .. -1].strip.downcase
+          header[(semi_offset + 1) .. -1].strip
         ]
       end
       

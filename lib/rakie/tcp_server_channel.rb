@@ -1,25 +1,41 @@
 module Rakie
-  class TCPServerChannel < Channel
-    def initialize(ip, port=nil, delegate=nil)
-      io = nil
+  class TCPServerChannel < TCPChannel
+    # @param host [String]
+    # @param port [Integer]
+    # @param delegate [Object]
+    # @overload initialize(host, port, delegate)
+    # @overload initialize(host, port)
+    # @overload initialize(port)
+    def initialize(host=LOCAL_HOST, port=3001, delegate=nil)
+      socket = nil
       
       if port == nil
-        port = ip
-        io = TCPServer.new(ip)
-
-      else
-        io = TCPServer.new(ip, port)
+        port = host
+        host = LOCAL_HOST
       end
       
+      socket = Socket.new(Socket::AF_INET, Socket::SOCK_STREAM)
+      socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, 1)
+      socket.bind(Socket.pack_sockaddr_in(port, host))
+      socket.listen(255)
+
       @clients = []
 
-      super(io, delegate)
+      super(host, port, delegate, socket)
     end
 
+    # @param io [Socket]
     def on_read(io)
       begin
-        client_io, = io.accept_nonblock
-        channel = Channel.new(client_io)
+        ret = io.accept_nonblock
+        # @type client_io [Socket]
+        client_io = ret[0]
+        # @type client_info [Addrinfo]
+        client_info = ret[1]
+        client_name_info = client_info.getnameinfo
+        client_host = client_name_info[0]
+        client_port = client_name_info[1]
+        channel = TCPChannel.new(client_host, client_port, nil, client_io)
 
         if @delegate != nil
           Log.debug("TCPServerChannel has delegate")
