@@ -50,7 +50,7 @@ module Rakie
 
         if handler != nil
           Log.debug("Event close #{new_io}")
-          handler.on_close(new_io)
+          handler.on_detach(new_io)
         end
 
         @ios.delete(new_io)
@@ -109,7 +109,7 @@ module Rakie
               Log.debug("Event remove read #{io}")
 
             elsif result == HANDLE_FAILED
-              handler.on_close(io)
+              handler.on_detach(io)
               Log.debug("Event close #{io}")
 
               @ios.delete(io)
@@ -134,7 +134,7 @@ module Rakie
               Log.debug("Event remove write #{io}")
 
             elsif result == HANDLE_FAILED
-              handler.on_close(io)
+              handler.on_detach(io)
               Log.debug("Event close #{io}")
 
               @ios.delete(io)

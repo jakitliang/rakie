@@ -12,25 +12,22 @@ module Rakie
       @channel = http_server.channel
 
       # @type [Array<WebsocketClient>]
-      @clients = []
+      @clients = {}
     end
 
     def on_accept(channel)
-      ws_client = Websocket.new(self, channel)
+      ws_client = Websocket.new(@delegate, channel)
+      ws_client.client_side = false
+
+      channel.delegate = self
 
       if @delegate
-        @delegate.on_register(ws_client)
+        @delegate.on_connect(ws_client)
         return
       end
 
-      @clients << ws_client
+      @clients[channel] = ws_client
       Log.debug("Rakie::WebsocketServer accept client: #{ws_client}")
-    end
-
-    def on_message(client, message)
-      if @delegate
-        @delegate.on_message(client, message)
-      end
     end
 
     # @param [HttpRequest] request
@@ -48,21 +45,36 @@ module Rakie
       end
     end
 
+    def on_recv(channel, data)
+      client = @clients[channel]
+
+      if client
+        client.on_recv(channel, data)
+      end
+    end
+
+    def on_send(channel)
+      client = @clients[channel]
+
+      if client
+        client.on_send(channel)
+      end
+    end
+
+    def on_close(channel)
+      client = @clients[channel]
+
+      if client
+        client.on_close(channel)
+      end
+    end
+
     def send(message, is_binary=false); end
 
-    def close
-      @clients.each do |client|
-        ws_message = WebsocketMessage.new
-        ws_message.fin = true
-        ws_message.op_code = WebsocketMessage::OP_CLOSE
-        ws_message.payload = "close"
+    def close; end
 
-        send_message = ws_message.to_s
-
-        Log.debug("Rakie::Websocket send close: #{send_message}")
-
-        @channel.write(send_message) # Response data
-      end
+    def clients
+      @clients.values
     end
   end
 end

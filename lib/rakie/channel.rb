@@ -92,9 +92,13 @@ module Rakie
       return Event::HANDLE_FINISHED
     end
 
-    def on_close(io)
+    def on_detach(io)
       begin
         io.close
+
+        if @delegate
+          @delegate.on_close(self)
+        end
 
       rescue
         Log.debug("Channel is already closed")

@@ -1,15 +1,13 @@
 module Rakie
   class Websocket
     attr_accessor :delegate, :client_side
+    attr_reader :channel
 
     # @param [Rakie::TCPChannel] channel
     def initialize(delegate=nil, channel=nil)
       @delegate = delegate
 
-      if channel
-        channel.delegate = self
-
-      else
+      if channel == nil
         channel = TCPChannel.new('127.0.0.1', 10086, self)        
       end
 
@@ -89,6 +87,12 @@ module Rakie
       end
     end
 
+    def on_close(channel)
+      if @delegate
+        @delegate.on_disconnect(self)
+      end
+    end
+
     def send(message, is_binary=false)
       ws_message = WebsocketMessage.new
       ws_message.fin = true
@@ -104,7 +108,7 @@ module Rakie
         ws_message.refresh_masking
       end
 
-      send_message = response.to_s
+      send_message = ws_message.to_s
 
       Log.debug("Rakie::Websocket send: #{send_message}")
 

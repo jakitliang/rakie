@@ -1,20 +1,19 @@
 module Rakie
   class HttpServer
     class Session
-      # @return [Array<HttpRequest>]
-      attr_accessor :requests
+      # @return [HttpRequest]
+      attr_accessor :request
 
       # @type [Array<HttpResponse>]
       attr_accessor :responses
 
       def initialize
-        @requests = []
+        @request = HttpRequest.new
         @responses = []
       end
     end
 
-    attr_reader :channel
-    attr_reader :opt
+    attr_reader :channel, :opt
 
     def initialize(delegate=nil)
       @channel = TCPServerChannel.new('127.0.0.1', 10086, self)
@@ -40,20 +39,16 @@ module Rakie
       end
 
       # @type [HttpRequest] request
-      request = session.requests[-1]
+      request = session.request
 
-      if request == nil
+      if request.parse_status == ParseStatus::COMPLETE
         request = HttpRequest.new
-        session.requests << request
-
-      elsif request.parse_status == ParseStatus::COMPLETE
-        request = HttpRequest.new
-        session.requests << request
+        session.request = request
       end
 
       len = request.parse(data)
 
-      Log.debug("Rakie::WebServer receive request: #{request.to_s}")
+      Log.debug("Rakie::HttpServer receive request: #{request.to_s}")
 
       if request.parse_status == ParseStatus::COMPLETE
         response = HttpResponse.new
@@ -61,7 +56,7 @@ module Rakie
         if upgrade = request.headers["upgrade"]
           if websocket_delegate = @opt[:websocket_delegate]
             websocket_delegate.upgrade(request, response)
-            Log.debug("Rakie::WebServer upgrade protocol")
+            Log.debug("Rakie::HttpServer upgrade protocol")
           end
 
         elsif @delegate != nil
@@ -72,14 +67,19 @@ module Rakie
           response.content = "<html><body><h1>Rakie!</h1></body></html>"
         end
         
+        if header_connection = request.headers["connection"]
+          response.headers["connection"] = header_connection
+        end
+
         if response.content.length > 0
           response.headers["content-length"] = response.content.length
         end
 
         response.headers["server"] = Rakie.full_version_s
+        session.responses << response
         response_data = response.to_s
 
-        Log.debug("Rakie::WebServer response: #{response_data}")
+        Log.debug("Rakie::HttpServer response: #{response_data}")
 
         channel.write(response_data) # Response data
 
@@ -87,7 +87,7 @@ module Rakie
         channel.close
         @sessions.delete(channel)
 
-        Log.debug("Rakie::WebServer: Illegal request")
+        Log.debug("Rakie::HttpServer: Illegal request")
         return len
       end
 
@@ -97,26 +97,27 @@ module Rakie
     def on_send(channel)
       session = @sessions[channel]
       # @type [HttpRequest]
-      last_request = session.requests.shift
+      last_response = session.responses.shift
 
-      if last_request
-        if connect_status = last_request.headers["connection"]
+      if last_response
+        if connect_status = last_response.headers["connection"]
           if connect_status.downcase == "close"
-            Log.debug("Rakie::WebServer: send finish and close channel")
+            Log.debug("Rakie::HttpServer: send finish and close channel")
             channel.close
             @sessions.delete(channel)
           end
+        end
 
-        elsif upgrade = request.headers["upgrade"]
+        if upgrade = last_response.headers["upgrade"]
           websocket_delegate = @opt[:websocket_delegate]
 
           if websocket_delegate
-            @websocket_service.on_accept(channel)
+            websocket_delegate.on_accept(channel)
             @sessions.delete(channel)
             return
           end
 
-          Log.debug("Rakie::WebServer: no websocket delegate and close channel")
+          Log.debug("Rakie::HttpServer: no websocket delegate and close channel")
           channel.close
           @sessions.delete(channel)
         end
