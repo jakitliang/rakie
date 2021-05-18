@@ -30,6 +30,7 @@ Gem::Specification.new do |s|
   s.homepage = %q{https://github.com/Jakitto/rakie}
   s.require_paths = ["lib"]
   s.rubygems_version = %q{1.6.2}
+  s.required_ruby_version = '> 2.5'
   s.summary = %q{Rakie!}
   s.license = 'BSD-2-Clause-Patent'
 end

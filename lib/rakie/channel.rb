@@ -20,7 +20,10 @@ module Rakie
         end
 
       rescue IO::EAGAINWaitReadable
-        Log.debug("Channel read finished")
+        Log.debug("Channel read pending")
+
+      rescue IO::EWOULDBLOCKWaitReadable
+        Log.debug("Channel read pending")
 
       rescue Exception => e
         # Process the last message on exception
@@ -67,19 +70,27 @@ module Rakie
 
     def on_write(io)
       len = 0
+      offset = 0
 
       begin
         while @write_buffer.length > 0
           len = io.write_nonblock(@write_buffer)
+          offset += len
           @write_buffer = @write_buffer[len .. -1]
         end
 
         Log.debug("Channel write finished")
 
       rescue IO::EAGAINWaitWritable
-        self.handle_write(len)
+        self.handle_write(offset)
 
-        Log.debug("Channel write continue")
+        Log.debug("Channel write pending")
+        return Event::HANDLE_CONTINUED
+
+      rescue IO::EWOULDBLOCKWaitWritable
+        self.handle_write(offset)
+
+        Log.debug("Channel write pending")
         return Event::HANDLE_CONTINUED
 
       rescue
@@ -87,7 +98,7 @@ module Rakie
         return Event::HANDLE_FAILED
       end
 
-      self.handle_write(len)
+      self.handle_write(offset)
 
       return Event::HANDLE_FINISHED
     end
