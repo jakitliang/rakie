@@ -22,7 +22,7 @@ module Rakie
     end
 
     def on_recv(channel, data)
-      # Log.debug("Rakie::HTTPServer recv: #{data}")
+      Log.debug("Rakie::Websocket recv: #{data}")
 
       # @type [WebsocketMessage] request
       message = @recv_message
@@ -34,7 +34,7 @@ module Rakie
 
       len = message.parse(data)
 
-      Log.debug("Rakie::Websocket receive message: #{message.to_s}")
+      Log.debug("Rakie::Websocket receive message: #{message.to_s} parse with #{len}")
 
       if message.parse_status == ParseStatus::COMPLETE
         response = WebsocketMessage.new
@@ -69,7 +69,7 @@ module Rakie
         channel.close
 
         Log.debug("Rakie::Websocket: Illegal message")
-        return len
+        return 0
       end
 
       return len
@@ -109,6 +109,7 @@ module Rakie
       end
 
       send_message = ws_message.to_s
+      @send_messages << ws_message
 
       Log.debug("Rakie::Websocket send: #{send_message}")
 

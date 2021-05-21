@@ -1,5 +1,5 @@
 module Rakie
-  VERSION = [0, 0, 6]
+  VERSION = [0, 0, 8]
 
   def self.version_s
     VERSION.join('.')

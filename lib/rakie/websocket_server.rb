@@ -1,12 +1,15 @@
 module Rakie
   class WebsocketServer < Websocket
     # @param [Rakie::HttpServer] http_server
-    def initialize(delegate=nil, http_server=nil)
+    def initialize(host: '127.0.0.1', port: 10086, delegate: nil, http_server: nil)
       @delegate = delegate
 
       if http_server == nil
-        http_server = HttpServer.new('127.0.0.1', 10086, self)
+        http_server = HttpServer.new(host: host, port: port)
       end
+
+      @host = http_server.host
+      @port = http_server.port
 
       http_server.opt[:websocket_delegate] = self
       @channel = http_server.channel
@@ -23,7 +26,6 @@ module Rakie
 
       if @delegate
         @delegate.on_connect(ws_client)
-        return
       end
 
       @clients[channel] = ws_client
@@ -49,8 +51,10 @@ module Rakie
       client = @clients[channel]
 
       if client
-        client.on_recv(channel, data)
+        return client.on_recv(channel, data)
       end
+
+      return data.length
     end
 
     def on_send(channel)
@@ -67,6 +71,8 @@ module Rakie
       if client
         client.on_close(channel)
       end
+
+      @clients.delete(channel)
     end
 
     def send(message, is_binary=false); end

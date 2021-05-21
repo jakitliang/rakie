@@ -13,10 +13,13 @@ module Rakie
       end
     end
 
-    attr_reader :channel, :opt
+    attr_reader :channel, :opt, :host, :port
 
-    def initialize(delegate=nil)
-      @channel = TCPServerChannel.new('127.0.0.1', 10086, self)
+    def initialize(host: '127.0.0.1', port: 10086, delegate: nil)
+      @host = host
+      @port = port
+
+      @channel = TCPServerChannel.new(host, port, self)
 
       # @type [Hash{Channel=>Session}]
       @sessions = {}
@@ -122,6 +125,10 @@ module Rakie
           @sessions.delete(channel)
         end
       end
+    end
+
+    def on_close(channel)
+      @sessions.delete(channel)
     end
   end
 end
