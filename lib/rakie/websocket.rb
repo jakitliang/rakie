@@ -42,12 +42,18 @@ module Rakie
         if message.op_code == WebsocketMessage::OP_PING
           response.fin = true
           response.op_code = WebsocketMessage::OP_PONG
-          response.payload = "pong"
+          response.payload = "Rakie::Websocket: op pong"
 
         elsif message.op_code == WebsocketMessage::OP_PONG
           response.fin = true
           response.op_code = WebsocketMessage::OP_PING
-          response.payload = "ping"
+          response.payload = "Rakie::Websocket: op ping"
+
+        elsif message.op_code == WebsocketMessage::OP_CLOSE
+          channel.close
+
+          Log.debug("Rakie::Websocket: op close")
+          return 0
 
         elsif @delegate
           @delegate.on_message(self, message.payload)

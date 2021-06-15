@@ -104,15 +104,20 @@ module Rakie
     end
 
     def on_detach(io)
+      if io.closed?
+        return
+      end
+
       begin
         io.close
 
-        if @delegate
-          @delegate.on_close(self)
-        end
-
       rescue
         Log.debug("Channel is already closed")
+        return
+      end
+
+      if @delegate
+        @delegate.on_close(self)
       end
 
       Log.debug("Channel close ok")
