@@ -21,64 +21,78 @@ module Rakie
       @client_side = true
     end
 
+    # @param [String] data
     def on_recv(channel, data)
       Log.debug("Rakie::Websocket recv: #{data}")
 
-      # @type [WebsocketMessage] request
-      message = @recv_message
+      total_parsed = 0
 
-      if message.parse_status == ParseStatus::COMPLETE
-        message = WebsocketMessage.new
-        @recv_message = message
-      end
+      while data.length > 0
+        # @type [WebsocketMessage] request
+        message = @recv_message
 
-      len = message.parse(data)
+        if message.parse_status == ParseStatus::COMPLETE
+          message = WebsocketMessage.new
+          @recv_message = message
+        end
 
-      Log.debug("Rakie::Websocket receive message: #{message.to_s} parse with #{len}")
+        len = message.parse(data)
+        total_parsed += len
 
-      if message.parse_status == ParseStatus::COMPLETE
-        response = WebsocketMessage.new
+        Log.debug("Rakie::Websocket receive message: #{message.to_s} parse with #{len}")
 
-        if message.op_code == WebsocketMessage::OP_PING
-          response.fin = true
-          response.op_code = WebsocketMessage::OP_PONG
-          response.payload = "Rakie::Websocket: op pong"
+        if message.parse_status == ParseStatus::COMPLETE
+          response = WebsocketMessage.new
 
-        elsif message.op_code == WebsocketMessage::OP_PONG
-          response.fin = true
-          response.op_code = WebsocketMessage::OP_PING
-          response.payload = "Rakie::Websocket: op ping"
+          if message.op_code == WebsocketMessage::OP_PING
+            response.fin = true
+            response.op_code = WebsocketMessage::OP_PONG
+            response.payload = "Rakie::Websocket: op pong"
 
-        elsif message.op_code == WebsocketMessage::OP_CLOSE
+          elsif message.op_code == WebsocketMessage::OP_PONG
+            response.fin = true
+            response.op_code = WebsocketMessage::OP_PING
+            response.payload = "Rakie::Websocket: op ping"
+
+          elsif message.op_code == WebsocketMessage::OP_CLOSE
+            channel.close
+
+            Log.debug("Rakie::Websocket: op close")
+            return 0
+
+          elsif @delegate
+            @delegate.on_message(self, message.payload)
+
+          else
+            response.fin = true
+            response.op_code = WebsocketMessage::OP_TEXT
+            response.payload = "Rakie!"
+          end
+          
+          response_data = response.to_s
+
+          Log.debug("Rakie::Websocket response: #{response_data}")
+
+          channel.write(response_data) # Response data
+
+        elsif message.parse_status == ParseStatus::CONTINUE
+          break
+          
+        elsif message.parse_status == ParseStatus::ERROR
           channel.close
 
-          Log.debug("Rakie::Websocket: op close")
+          Log.debug("Rakie::Websocket: Illegal message")
           return 0
-
-        elsif @delegate
-          @delegate.on_message(self, message.payload)
-          return len
-
-        else
-          response.fin = true
-          response.op_code = WebsocketMessage::OP_TEXT
-          response.payload = "Rakie!"
         end
-        
-        response_data = response.to_s
 
-        Log.debug("Rakie::Websocket response: #{response_data}")
+        if len >= data.length
+          break
+        end
 
-        channel.write(response_data) # Response data
-
-      elsif message.parse_status == ParseStatus::ERROR
-        channel.close
-
-        Log.debug("Rakie::Websocket: Illegal message")
-        return 0
+        data = data[len .. -1]
       end
 
-      return len
+      return total_parsed
     end
 
     def on_send(channel)
