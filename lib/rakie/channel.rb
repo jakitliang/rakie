@@ -56,6 +56,7 @@ module Rakie
       while len > 0
         if len < task
           @write_task[0] = task - len
+          return
         end
 
         len -= task
@@ -65,6 +66,8 @@ module Rakie
           @delegate.on_send(self)
            Log.debug("Channel handle on_send")
         end
+
+        task = @write_task[0]
       end
     end
 
@@ -79,7 +82,7 @@ module Rakie
           @write_buffer = @write_buffer[len .. -1]
         end
 
-        Log.debug("Channel write finished")
+        Log.debug("Channel write #{len} bytes finished")
 
       rescue IO::EAGAINWaitWritable
         self.handle_write(offset)
@@ -145,6 +148,8 @@ module Rakie
 
       @write_buffer << data
       @write_task << data.length
+
+      Log.debug("write buffer append size: #{data.length}")
 
       Event.modify(@io, self, (Event::READ_EVENT | Event::WRITE_EVENT))
 

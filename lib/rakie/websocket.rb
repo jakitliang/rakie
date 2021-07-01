@@ -23,7 +23,7 @@ module Rakie
 
     # @param [String] data
     def on_recv(channel, data)
-      Log.debug("Rakie::Websocket recv: #{data}")
+      Log.debug("Rakie::Websocket recv len: #{data.length}")
 
       total_parsed = 0
 
@@ -39,7 +39,7 @@ module Rakie
         len = message.parse(data)
         total_parsed += len
 
-        Log.debug("Rakie::Websocket receive message: #{message.to_s} parse with #{len}")
+        Log.debug("Rakie::Websocket receive message: #{message.payload} parse with #{len}")
 
         if message.parse_status == ParseStatus::COMPLETE
           response = WebsocketMessage.new
@@ -69,15 +69,15 @@ module Rakie
             response.payload = "Rakie!"
           end
           
-          response_data = response.to_s
+          # response_data = response.to_s
 
-          Log.debug("Rakie::Websocket response: #{response_data}")
+          # Log.debug("Rakie::Websocket response: #{response_data}")
 
-          channel.write(response_data) # Response data
+          # channel.write(response_data) # Response data
 
         elsif message.parse_status == ParseStatus::CONTINUE
           break
-          
+
         elsif message.parse_status == ParseStatus::ERROR
           channel.close
 
@@ -131,7 +131,7 @@ module Rakie
       send_message = ws_message.to_s
       @send_messages << ws_message
 
-      Log.debug("Rakie::Websocket send: #{send_message}")
+      Log.debug("Rakie::Websocket send: #{send_message} with #{send_message.length}")
 
       @channel.write(send_message) # Response data
     end
