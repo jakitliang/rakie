@@ -1,3 +1,6 @@
+<img src="https://user-images.githubusercontent.com/18480287/126038375-c546d36a-94e9-45a2-b001-5807dfe63344.png" width="96" height="96" />
+
+
 # Rakie
 
 > Rakie is lucky and cakie~
