@@ -194,7 +194,7 @@ module Rakie
 
     # @return [Integer]
     def self.concurrent
-      @concurrent ||= 2
+      @concurrent ||= 8
     end
 
     # @param [Integer] count

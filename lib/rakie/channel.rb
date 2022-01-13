@@ -27,10 +27,10 @@ module Rakie
 
       rescue Exception => e
         # Process the last message on exception
-        if @delegate != nil
-          @delegate.on_recv(self, @read_buffer)
-          @read_buffer = String.new # Reset buffer
-        end
+        # if @delegate != nil
+        #   @delegate.on_recv(self, @read_buffer)
+        #   @read_buffer = String.new # Reset buffer
+        # end
 
         Log.debug("Channel error #{io}: #{e}")
         return Event::HANDLE_FAILED
@@ -103,7 +103,11 @@ module Rakie
 
       self.handle_write(offset)
 
-      return Event::HANDLE_FINISHED
+      if @write_buffer.length == 0
+        return Event::HANDLE_FINISHED
+      end
+
+      return Event::HANDLE_CONTINUED
     end
 
     def on_detach(io)
@@ -127,7 +131,7 @@ module Rakie
     end
 
     def read(size)
-      if self.eof?
+      if @read_buffer.empty?
         return ""
       end
 
@@ -163,10 +167,6 @@ module Rakie
 
       Event.delete(@io)
       return nil
-    end
-
-    def eof?
-      @read_buffer.empty?
     end
 
     def closed?
